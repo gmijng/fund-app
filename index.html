@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>基金估值</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; padding-bottom: 100px; }
+        nav { background: #4A90D9; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 20px; }
+        nav a { color: white; text-decoration: none; font-weight: bold; cursor: pointer; padding: 5px 0; }
+        nav a.active { border-bottom: 2px solid white; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; margin-bottom: 15px; }
+        .fund-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+        .fund-item:last-child { border-bottom: none; }
+        .fund-info { flex: 1; }
+        .fund-name { font-weight: bold; color: #333; margin-bottom: 5px; }
+        .fund-code { font-size: 12px; color: #999; }
+        .fund-value { text-align: right; }
+        .fund-price { font-size: 18px; font-weight: bold; }
+        .fund-change { font-size: 14px; }
+        .rise { color: #C62828; }
+        .fall { color: #2E7D32; }
+        .profit { color: #C62828; }
+        .loss { color: #2E7D32; }
+        .summary { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+        .summary-amount { font-size: 32px; font-weight: bold; margin: 10px 0; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        input, button { padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        button { background: #4A90D9; color: white; border: none; cursor: pointer; }
+        button:hover { background: #357ABD; }
+        button.delete { background: #C62828; padding: 5px 10px; font-size: 12px; }
+        .no-data { text-align: center; color: #999; padding: 40px; }
+        .loading { text-align: center; color: #666; padding: 20px; }
+        .error { color: #C62828; text-align: center; padding: 10px; }
+        .pwa-tip { background: #E3F2FD; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; color: #1565C0; }
+        .pwa-tip button { background: #4A90D9; margin-left: 10px; padding: 8px 15px; }
+        @media (max-width: 600px) {
+            .fund-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .fund-value { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a class="active" onclick="showPage('list')">我的基金</a>
+            <a onclick="showPage('add')">添加基金</a>
+        </nav>
+
+        <div id="page-list">
+            <div class="summary">
+                <div>总市值</div>
+                <div class="summary-amount" id="total-value">¥0.00</div>
+                <div>预估 <span id="total-profit">+¥0.00</span></div>
+            </div>
+
+            <div class="card">
+                <h2>基金列表</h2>
+                <div id="funds-list"></div>
+                <div id="no-funds" class="no-data">暂无基金，点击"添加基金"添加</div>
+            </div>
+        </div>
+
+        <div id="page-add" style="display: none;">
+            <div class="card">
+                <h2>添加基金</h2>
+                <form onsubmit="addFund(event)">
+                    <input type="text" id="fund-code" placeholder="基金代码（如：000001）" required>
+                    <input type="number" id="fund-amount" placeholder="持有金额（元）" step="0.01" min="0" required>
+                    <button type="submit">添加</button>
+                </form>
+                <div id="add-error" class="error" style="display: none; margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let funds = JSON.parse(localStorage.getItem('fund_list')) || [];
+
+        function saveFunds() {
+            localStorage.setItem('fund_list', JSON.stringify(funds));
+        }
+
+        function showPage(page) {
+            document.querySelectorAll('.page, #page-list, #page-add').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            if (page === 'list') {
+                document.getElementById('page-list').style.display = 'block';
+                document.querySelector('nav a:nth-child(1)').classList.add('active');
+                renderFunds();
+            } else {
+                document.getElementById('page-add').style.display = 'block';
+                document.querySelector('nav a:nth-child(2)').classList.add('active');
+            }
+            event.target.classList.add('active');
+        }
+
+        async function fetchFundData(code) {
+            try {
+                // 使用天天基金的API
+                const url = `https://fundgz.1234567.com.cn/js/${code}.js?rt=1700000000`;
+                const response = await fetch(url);
+                const text = await response.text();
+
+                // 解析 JSONP 响应
+                const match = text.match(/jsonpgz\(\{(.+)\}\)/);
+                if (match) {
+                    const data = JSON.parse(`{${match[1]}}`);
+                    return {
+                        name: data.name,
+                        code: code,
+                        price: parseFloat(data.dwjz), // 当前单位净值
+                        change: parseFloat(data.jzrq), // 日期
+                        gsz: parseFloat(data.gsz), // 估算净值
+                        gszzl: parseFloat(data.gszzl), // 估算涨跌幅
+                    };
+                }
+                throw new Error('未找到该基金');
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function addFund(e) {
+            e.preventDefault();
+            const code = document.getElementById('fund-code').value.trim();
+            const amount = parseFloat(document.getElementById('fund-amount').value);
+            const errorDiv = document.getElementById('add-error');
+
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+
+            // 检查是否已添加
+            if (funds.find(f => f.code === code)) {
+                errorDiv.textContent = '该基金已添加';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const fundData = await fetchFundData(code);
+
+            if (!fundData) {
+                errorDiv.textContent = '未找到该基金，请检查代码是否正确';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            funds.push({
+                code: code,
+                name: fundData.name,
+                amount: amount,
+                cost: amount // 投入金额
+            });
+
+            saveFunds();
+
+            document.getElementById('fund-code').value = '';
+            document.getElementById('fund-amount').value = '';
+
+            showPage('list');
+            await refreshFunds();
+        }
+
+        function deleteFund(code) {
+            if (confirm('确定删除该基金？')) {
+                funds = funds.filter(f => f.code !== code);
+                saveFunds();
+                renderFunds();
+            }
+        }
+
+        async function refreshFunds() {
+            const listDiv = document.getElementById('funds-list');
+            const noFundsDiv = document.getElementById('no-funds');
+
+            if (funds.length === 0) {
+                listDiv.innerHTML = '';
+                noFundsDiv.style.display = 'block';
+                updateSummary();
+                return;
+            }
+
+            noFundsDiv.style.display = 'none';
+            listDiv.innerHTML = '<div class="loading">正在获取数据...</div>';
+
+            let totalValue = 0;
+            let totalCost = 0;
+            let html = '';
+
+            for (const fund of funds) {
+                const data = await fetchFundData(fund.code);
+
+                if (data && data.gsz) {
+                    // 计算估算市值 = 持有金额 / 成本净值 * 估算净值
+                    const costPrice = fund.cost / fund.amount; // 成本单价
+                    const estimateValue = fund.amount / costPrice * data.gsz; // 估算市值
+                    const profit = estimateValue - fund.cost; // 预估收益
+                    const profitRate = (profit / fund.cost * 100).toFixed(2); // 收益率
+
+                    totalValue += estimateValue;
+                    totalCost += fund.cost;
+
+                    const isRise = profit >= 0;
+                    html += `
+                        <div class="fund-item">
+                            <div class="fund-info">
+                                <div class="fund-name">${fund.name}</div>
+                                <div class="fund-code">${fund.code} · 持有 ${fund.amount} 元</div>
+                            </div>
+                            <div class="fund-value">
+                                <div class="fund-price">¥${estimateValue.toFixed(2)}</div>
+                                <div class="fund-change ${isRise ? 'rise' : 'fall'}">
+                                    ${isRise ? '↑' : '↓'} ${Math.abs(profit).toFixed(2)} (${isRise ? '+' : ''}${profitRate}%)
+                                </div>
+                            </div>
+                            <button class="delete" onclick="deleteFund('${fund.code}')">删除</button>
+                        </div>
+                    `;
+                } else {
+                    // 无法获取数据时显示基本信息
+                    totalCost += fund.cost;
+                    html += `
+                        <div class="fund-item">
+                            <div class="fund-info">
+                                <div class="fund-name">${fund.name || fund.code}</div>
+                                <div class="fund-code">${fund.code} · 持有 ${fund.amount} 元</div>
+                            </div>
+                            <div class="fund-value">
+                                <div class="fund-price">¥${fund.amount.toFixed(2)}</div>
+                                <div class="fund-change">数据获取失败</div>
+                            </div>
+                            <button class="delete" onclick="deleteFund('${fund.code}')">删除</button>
+                        </div>
+                    `;
+                }
+            }
+
+            listDiv.innerHTML = html;
+
+            // 更新总计
+            const totalProfit = totalValue - totalCost;
+            document.getElementById('total-value').textContent = '¥' + totalValue.toFixed(2);
+            const profitSpan = document.getElementById('total-profit');
+            profitSpan.textContent = (totalProfit >= 0 ? '+' : '') + '¥' + totalProfit.toFixed(2);
+            profitSpan.className = totalProfit >= 0 ? 'rise' : 'fall';
+        }
+
+        function updateSummary() {
+            let totalValue = 0;
+            let totalCost = 0;
+            funds.forEach(f => {
+                totalCost += f.cost;
+                totalValue += f.amount; // 暂时用持有金额
+            });
+            const totalProfit = totalValue - totalCost;
+            document.getElementById('total-value').textContent = '¥' + totalValue.toFixed(2);
+            const profitSpan = document.getElementById('total-profit');
+            profitSpan.textContent = (totalProfit >= 0 ? '+' : '') + '¥' + totalProfit.toFixed(2);
+            profitSpan.className = totalProfit >= 0 ? 'rise' : 'fall';
+        }
+
+        function renderFunds() {
+            refreshFunds();
+        }
+
+        // 初始加载
+        if (funds.length > 0) {
+            refreshFunds();
+        } else {
+            document.getElementById('no-funds').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
