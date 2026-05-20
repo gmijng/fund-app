@@ -69,7 +69,8 @@
                 <h2>添加基金</h2>
                 <form onsubmit="addFund(event)">
                     <input type="text" id="fund-code" placeholder="基金代码（如：000001）" required>
-                    <input type="number" id="fund-amount" placeholder="持有金额（元）" step="0.01" min="0" required>
+                    <input type="number" id="fund-amount" placeholder="持有份额（份）" step="0.01" min="0" required>
+                    <input type="number" id="fund-cost" placeholder="买入净值（如：1.234）" step="0.0001" min="0" required>
                     <button type="submit">添加</button>
                 </form>
                 <div id="add-error" class="error" style="display: none; margin-top: 10px;"></div>
@@ -128,7 +129,8 @@
         async function addFund(e) {
             e.preventDefault();
             const code = document.getElementById('fund-code').value.trim();
-            const amount = parseFloat(document.getElementById('fund-amount').value);
+            const amount = parseFloat(document.getElementById('fund-amount').value); // 持有份额
+            const costNav = parseFloat(document.getElementById('fund-cost').value); // 买入净值
             const errorDiv = document.getElementById('add-error');
 
             errorDiv.style.display = 'none';
@@ -152,14 +154,15 @@
             funds.push({
                 code: code,
                 name: fundData.name,
-                amount: amount,
-                cost: amount // 投入金额
+                shares: amount,      // 持有份额
+                costNav: costNav     // 买入净值
             });
 
             saveFunds();
 
             document.getElementById('fund-code').value = '';
             document.getElementById('fund-amount').value = '';
+            document.getElementById('fund-cost').value = '';
 
             showPage('list');
             await refreshFunds();
@@ -195,21 +198,21 @@
                 const data = await fetchFundData(fund.code);
 
                 if (data && data.gsz) {
-                    // 计算估算市值 = 持有金额 / 成本净值 * 估算净值
-                    const costPrice = fund.cost / fund.amount; // 成本单价
-                    const estimateValue = fund.amount / costPrice * data.gsz; // 估算市值
-                    const profit = estimateValue - fund.cost; // 预估收益
-                    const profitRate = (profit / fund.cost * 100).toFixed(2); // 收益率
+                    // 计算：持有份额 * 当前估算净值 = 估算市值
+                    const estimateValue = fund.shares * data.gsz; // 估算市值
+                    const costValue = fund.shares * fund.costNav; // 成本金额
+                    const profit = estimateValue - costValue; // 预估收益
+                    const profitRate = (profit / costValue * 100).toFixed(2); // 收益率
 
                     totalValue += estimateValue;
-                    totalCost += fund.cost;
+                    totalCost += costValue;
 
                     const isRise = profit >= 0;
                     html += `
                         <div class="fund-item">
                             <div class="fund-info">
                                 <div class="fund-name">${fund.name}</div>
-                                <div class="fund-code">${fund.code} · 持有 ${fund.amount} 元</div>
+                                <div class="fund-code">${fund.code} · ${fund.shares}份 / 净值${fund.costNav}</div>
                             </div>
                             <div class="fund-value">
                                 <div class="fund-price">¥${estimateValue.toFixed(2)}</div>
@@ -222,15 +225,16 @@
                     `;
                 } else {
                     // 无法获取数据时显示基本信息
-                    totalCost += fund.cost;
+                    const costValue = fund.shares * fund.costNav;
+                    totalCost += costValue;
                     html += `
                         <div class="fund-item">
                             <div class="fund-info">
                                 <div class="fund-name">${fund.name || fund.code}</div>
-                                <div class="fund-code">${fund.code} · 持有 ${fund.amount} 元</div>
+                                <div class="fund-code">${fund.code} · ${fund.shares}份 / 净值${fund.costNav}</div>
                             </div>
                             <div class="fund-value">
-                                <div class="fund-price">¥${fund.amount.toFixed(2)}</div>
+                                <div class="fund-price">¥${(fund.shares * fund.costNav).toFixed(2)}</div>
                                 <div class="fund-change">数据获取失败</div>
                             </div>
                             <button class="delete" onclick="deleteFund('${fund.code}')">删除</button>
@@ -253,8 +257,9 @@
             let totalValue = 0;
             let totalCost = 0;
             funds.forEach(f => {
-                totalCost += f.cost;
-                totalValue += f.amount; // 暂时用持有金额
+                const costValue = f.shares * f.costNav;
+                totalCost += costValue;
+                totalValue += f.shares * f.costNav; // 无数据时显示成本
             });
             const totalProfit = totalValue - totalCost;
             document.getElementById('total-value').textContent = '¥' + totalValue.toFixed(2);
