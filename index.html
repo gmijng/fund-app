@@ -6,147 +6,156 @@
     <title>基金估值</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; padding-bottom: 100px; }
-        nav { background: #4A90D9; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 20px; }
-        nav a { color: white; text-decoration: none; font-weight: bold; cursor: pointer; padding: 5px 0; flex: 1; text-align: center; }
-        nav a.active { border-bottom: 2px solid white; }
-        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #333; margin-bottom: 15px; font-size: 18px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F5F5F5; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; padding-bottom: 80px; }
+        .header { background: linear-gradient(135deg, #4A90D9, #357ABD); color: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; }
+        .header h1 { font-size: 20px; margin-bottom: 5px; }
+        .header .subtitle { opacity: 0.9; font-size: 13px; }
+        .summary-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-label { color: #666; font-size: 14px; }
+        .summary-value { font-weight: bold; font-size: 16px; }
+        .summary-value.red { color: #C62828; }
+        .summary-value.green { color: #2E7D32; }
+        .fund-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .fund-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
         .fund-item:last-child { border-bottom: none; }
         .fund-info { flex: 1; }
-        .fund-name { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 15px; }
+        .fund-name { font-weight: bold; color: #333; font-size: 15px; margin-bottom: 4px; }
         .fund-code { font-size: 12px; color: #999; }
-        .fund-value { text-align: right; }
-        .fund-price { font-size: 18px; font-weight: bold; }
-        .fund-change { font-size: 14px; }
-        .rise { color: #C62828; }
-        .fall { color: #2E7D32; }
-        .summary { background: linear-gradient(135deg, #4A90D9, #6BB3F0); border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(74,144,217,0.3); color: white; }
-        .summary-amount { font-size: 32px; font-weight: bold; margin: 10px 0; }
-        .summary-profit { font-size: 16px; opacity: 0.9; }
-        form { display: flex; flex-direction: column; gap: 12px; }
-        input, button { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        input:focus { outline: none; border-color: #4A90D9; }
-        button { background: #4A90D9; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #357ABD; }
-        button.delete { background: #ff6b6b; padding: 6px 12px; font-size: 12px; font-weight: normal; }
-        .no-data { text-align: center; color: #999; padding: 40px; font-size: 14px; }
-        .loading { text-align: center; color: #666; padding: 20px; }
-        .error { color: #C62828; text-align: center; padding: 10px; font-size: 14px; }
-        .tips { background: #FFF9E6; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #666; }
-        .tips span { color: #4A90D9; font-weight: bold; }
-        .input-hint { font-size: 12px; color: #999; margin-top: -8px; }
-        @media (max-width: 600px) {
-            .summary { flex-direction: column; }
-            form { flex-direction: column; }
-            input, select, button { width: 100%; }
-        }
+        .fund-value { text-align: right; margin-right: 10px; }
+        .fund-price { font-size: 16px; font-weight: bold; color: #333; }
+        .fund-change { font-size: 13px; }
+        .fund-change.up { color: #C62828; }
+        .fund-change.down { color: #2E7D32; }
+        .delete-btn { background: #FF6B6B; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .add-section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 15px; }
+        .add-section h2 { font-size: 16px; color: #333; margin-bottom: 15px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        .form-group input:focus { outline: none; border-color: #4A90D9; }
+        .submit-btn { width: 100%; padding: 14px; background: #4A90D9; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .submit-btn:hover { background: #357ABD; }
+        .empty-state { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+        .loading { text-align: center; padding: 20px; color: #666; }
+        .error-msg { color: #C62828; font-size: 13px; margin-top: 8px; text-align: center; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab { flex: 1; padding: 12px; text-align: center; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; color: #666; }
+        .tab.active { background: #4A90D9; color: white; }
+        .page { display: none; }
+        .page.active { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
-        <nav>
-            <a class="active" onclick="showPage('list')">我的基金</a>
-            <a onclick="showPage('add')">添加</a>
-        </nav>
+        <div class="header">
+            <h1>基金估值</h1>
+            <div class="subtitle">实时估算涨跌</div>
+        </div>
 
-        <div id="page-list">
-            <div class="summary">
-                <div>总投入</div>
-                <div class="summary-amount" id="total-invest">¥0.00</div>
-                <div class="summary-profit">总收益 <span id="total-profit">+¥0.00</span></div>
+        <div class="tabs">
+            <div class="tab active" onclick="showPage('list')">我的基金</div>
+            <div class="tab" onclick="showPage('add')">添加基金</div>
+        </div>
+
+        <div id="page-list" class="page active">
+            <div class="summary-card">
+                <div class="summary-row">
+                    <span class="summary-label">总投入(元)</span>
+                    <span class="summary-value" id="total-invest">0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">今日收益(元)</span>
+                    <span class="summary-value" id="total-profit">0.00</span>
+                </div>
             </div>
 
-            <div class="card">
-                <div id="funds-list"></div>
-                <div id="no-funds" class="no-data">暂无基金，点击"添加"添加</div>
+            <div class="fund-list">
+                <div id="funds-container"></div>
+                <div id="empty-state" class="empty-state">暂无基金，点击"添加基金"添加</div>
             </div>
         </div>
 
-        <div id="page-add" style="display: none;">
-            <div class="card">
+        <div id="page-add" class="page">
+            <div class="add-section">
                 <h2>添加基金</h2>
-                <form onsubmit="addFund(event)">
-                    <input type="text" id="fund-code" placeholder="基金代码（如：000001）" required>
-                    <input type="number" id="fund-invest" placeholder="投入金额（元）" step="0.01" min="0" required>
-                    <input type="number" id="fund-profit" placeholder="当日收益（元）" step="0.01" required>
-                    <p class="input-hint">输入正数代表赚钱，负数代表亏钱</p>
-                    <button type="submit">添加</button>
-                </form>
-                <div id="add-error" class="error" style="display: none; margin-top: 10px;"></div>
+                <div class="form-group">
+                    <label>基金代码</label>
+                    <input type="text" id="fund-code" placeholder="如：000001">
+                </div>
+                <div class="form-group">
+                    <label>投入金额(元)</label>
+                    <input type="number" id="fund-invest" placeholder="如：10000">
+                </div>
+                <div class="form-group">
+                    <label>今日收益(元)</label>
+                    <input type="number" id="fund-profit" placeholder="正数赚钱，负数亏钱">
+                </div>
+                <div id="error-msg" class="error-msg" style="display: none;"></div>
+                <button class="submit-btn" onclick="addFund()">添加</button>
             </div>
         </div>
     </div>
 
     <script>
-        let funds = JSON.parse(localStorage.getItem('fund_list_v2')) || [];
+        let funds = JSON.parse(localStorage.getItem('funds_v3')) || [];
 
         function saveFunds() {
-            localStorage.setItem('fund_list_v2', JSON.stringify(funds));
+            localStorage.setItem('funds_v3', JSON.stringify(funds));
         }
 
         function showPage(page) {
-            document.querySelectorAll('.page, #page-list, #page-add').forEach(e => e.style.display = 'none');
-            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
-            if (page === 'list') {
-                document.getElementById('page-list').style.display = 'block';
-                document.querySelector('nav a:nth-child(1)').classList.add('active');
-                renderFunds();
-            } else {
-                document.getElementById('page-add').style.display = 'block';
-                document.querySelector('nav a:nth-child(2)').classList.add('active');
-            }
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
             event.target.classList.add('active');
+            if (page === 'list') renderFunds();
         }
 
-        async function fetchFundData(code) {
+        async function fetchFund(code) {
             try {
                 const url = `https://fundgz.1234567.com.cn/js/${code}.js?rt=${Date.now()}`;
                 const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-                const response = await fetch(proxyUrl);
-                const text = await response.text();
+                const res = await fetch(proxyUrl);
+                const text = await res.text();
                 const match = text.match(/jsonpgz\(\{(.+)\}\)/);
                 if (match) {
                     const data = JSON.parse(`{${match[1]}}`);
-                    return {
-                        name: data.name,
-                        code: code,
-                        gsz: parseFloat(data.gsz),
-                        gszzl: parseFloat(data.gszzl)
-                    };
+                    return { name: data.name, gszzl: parseFloat(data.gszzl) };
                 }
-                return null;
-            } catch (e) {
-                return null;
-            }
+            } catch (e) {}
+            return null;
         }
 
-        async function addFund(e) {
-            e.preventDefault();
+        async function addFund() {
             const code = document.getElementById('fund-code').value.trim();
             const invest = parseFloat(document.getElementById('fund-invest').value);
             const profit = parseFloat(document.getElementById('fund-profit').value);
-            const errorDiv = document.getElementById('add-error');
+            const errorMsg = document.getElementById('error-msg');
 
-            errorDiv.style.display = 'none';
+            errorMsg.style.display = 'none';
 
-            if (funds.find(f => f.code === code)) {
-                errorDiv.textContent = '该基金已添加';
-                errorDiv.style.display = 'block';
+            if (!code || isNaN(invest) || isNaN(profit)) {
+                errorMsg.textContent = '请填写所有字段';
+                errorMsg.style.display = 'block';
                 return;
             }
 
-            const fundData = await fetchFundData(code);
+            if (funds.find(f => f.code === code)) {
+                errorMsg.textContent = '该基金已添加';
+                errorMsg.style.display = 'block';
+                return;
+            }
 
+            const data = await fetchFund(code);
             funds.push({
                 code: code,
-                name: fundData ? fundData.name : code,
+                name: data ? data.name : code,
                 invest: invest,
                 profit: profit,
-                gsz: fundData ? fundData.gsz : null,
-                gszzl: fundData ? fundData.gszzl : null
+                gszzl: data ? data.gszzl : null
             });
 
             saveFunds();
@@ -166,37 +175,38 @@
             }
         }
 
-        async function refreshFunds() {
-            const listDiv = document.getElementById('funds-list');
-            const noFundsDiv = document.getElementById('no-funds');
+        async function renderFunds() {
+            const container = document.getElementById('funds-container');
+            const emptyState = document.getElementById('empty-state');
 
             if (funds.length === 0) {
-                listDiv.innerHTML = '';
-                noFundsDiv.style.display = 'block';
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
                 updateSummary();
                 return;
             }
 
-            noFundsDiv.style.display = 'none';
-            listDiv.innerHTML = '<div class="loading">正在获取数据...</div>';
+            emptyState.style.display = 'none';
+            container.innerHTML = '<div class="loading">正在获取数据...</div>';
 
             let totalInvest = 0;
             let totalProfit = 0;
             let html = '';
 
             for (const fund of funds) {
-                // 尝试获取最新数据
-                const data = await fetchFundData(fund.code);
+                const data = await fetchFund(fund.code);
                 if (data) {
                     fund.name = data.name;
-                    fund.gsz = data.gsz;
                     fund.gszzl = data.gszzl;
                 }
 
                 totalInvest += fund.invest;
                 totalProfit += fund.profit;
 
-                const isRise = fund.profit >= 0;
+                const isUp = fund.profit >= 0;
+                const arrow = isUp ? '↑' : '↓';
+                const cls = isUp ? 'up' : 'down';
+
                 html += `
                     <div class="fund-item">
                         <div class="fund-info">
@@ -205,17 +215,14 @@
                         </div>
                         <div class="fund-value">
                             <div class="fund-price">¥${fund.invest.toFixed(2)}</div>
-                            <div class="fund-change ${isRise ? 'rise' : 'fall'}">
-                                ${isRise ? '↑' : '↓'} ${Math.abs(fund.profit).toFixed(2)}
-                                ${fund.gszzl ? `(${isRise ? '+' : ''}${fund.gszzl}%)` : ''}
-                            </div>
+                            <div class="fund-change ${cls}">${arrow} ${Math.abs(fund.profit).toFixed(2)} ${fund.gszzl ? '(' + (isUp ? '+' : '') + fund.gszzl + '%)' : ''}</div>
                         </div>
-                        <button class="delete" onclick="deleteFund('${fund.code}')">删</button>
+                        <button class="delete-btn" onclick="deleteFund('${fund.code}')">删除</button>
                     </div>
                 `;
             }
 
-            listDiv.innerHTML = html;
+            container.innerHTML = html;
             saveFunds();
             updateSummary();
         }
@@ -224,20 +231,18 @@
             const totalInvest = funds.reduce((sum, f) => sum + f.invest, 0);
             const totalProfit = funds.reduce((sum, f) => sum + f.profit, 0);
 
-            document.getElementById('total-invest').textContent = '¥' + totalInvest.toFixed(2);
-            const profitSpan = document.getElementById('total-profit');
-            profitSpan.textContent = (totalProfit >= 0 ? '+' : '') + '¥' + totalProfit.toFixed(2);
+            const investEl = document.getElementById('total-invest');
+            const profitEl = document.getElementById('total-profit');
+
+            investEl.textContent = totalInvest.toFixed(2);
+            profitEl.textContent = (totalProfit >= 0 ? '+' : '') + totalProfit.toFixed(2);
+            profitEl.className = 'summary-value ' + (totalProfit >= 0 ? 'red' : 'green');
         }
 
-        function renderFunds() {
-            refreshFunds();
-        }
-
-        document.getElementById('date').valueAsDate = new Date();
         if (funds.length > 0) {
-            refreshFunds();
+            renderFunds();
         } else {
-            document.getElementById('no-funds').style.display = 'block';
+            document.getElementById('empty-state').style.display = 'block';
         }
     </script>
 </body>
